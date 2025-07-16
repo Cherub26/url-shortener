@@ -14,9 +14,17 @@ This application allows users to easily shorten long URLs and track the click st
 
 ## Technologies Used
 
-- **Backend:** Node.js, Express.js
+- **Backend:** Node.js, Express.js (located in `backend/`)
 - **Database:** PostgreSQL
-- **Frontend:** HTML, CSS, JavaScript
+- **Frontend:** Angular (located in `frontend/`)
+
+## Project Structure
+
+```
+url-shortener/
+  backend/    # Node.js/Express backend
+  frontend/   # Angular frontend
+```
 
 ## Installation
 
@@ -26,31 +34,61 @@ This application allows users to easily shorten long URLs and track the click st
    cd url-shortener
    ```
 
-2. **Install dependencies:**
+2. **Install dependencies for both backend and frontend:**
    ```bash
+   cd backend
    npm install
+   cd ../frontend
+   npm install
+   cd ..
    ```
 
-3. **Configure the database:**
-   - Create a PostgreSQL database.
-   - Set up environment variables in a `.env` file:
-     ```
-     DATABASE_URL=postgres://user:password@localhost:5432/database_name
-     PORT=3000
-     ```
+3. **Configure environment variables:**
+   - **Backend:**
+     - Create a PostgreSQL database.
+     - Copy the example file and fill in your values:
+       ```bash
+       cd backend
+       cp .env.example .env
+       ```
+     - Edit `.env` with your settings. Example:
+       ```env
+       DATABASE_URL=postgres://user:password@localhost:5432/database_name
+       PORT=3000
+       JWT_SECRET=your_jwt_secret
+       ```
+   - **Frontend:**
+     - Copy the example file and fill in your values:
+       ```bash
+       cd ../frontend
+       cp .env.example .env
+       ```
+     - Edit `.env` with your settings. Example:
+       ```env
+       NG_APP_BACKEND_PORT=3000
+       NG_APP_BACKEND_HOST=http://localhost
+       ```
 
 4. **Start the application:**
-   ```bash
-   npm run dev
-   ```
-   The app will run by default at [http://localhost:3000](http://localhost:3000).
+   - **Backend:**
+     ```bash
+     cd backend
+     npm run dev
+     ```
+   - **Frontend:**
+     ```bash
+     cd ../frontend
+     ng serve
+     ```
+   - The backend will run by default at [http://localhost:3000](http://localhost:3000).
+   - The frontend will typically run at [http://localhost:4200](http://localhost:4200).
 
 ## Usage
 
 - Enter your long URL on the main page and click the "Shorten" button.
 - Copy and share the generated short URL.
 - When the short URL is accessed, the system automatically redirects to the original URL and increments the click count.
-- You can view the click statistics for your short URLs on the statistics page.
+- You can view the click count for your short URLs on the links page.
 
 ## Development
 
