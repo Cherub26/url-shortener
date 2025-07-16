@@ -1,0 +1,16 @@
+<app-dashboard [username]="username" (logout)="handleLogout()"></app-dashboard>
+<main>
+  <mat-card class="links-card mat-elevation-z8">
+    <h2>Your Links</h2>
+    <div *ngIf="loading" class="loading">Loading...</div>
+    <div *ngIf="error" class="error">{{ error }}</div>
+    <div *ngIf="!loading && !error && links.length === 0" class="empty">No links found.</div>
+    <ul *ngIf="!loading && !error && links.length > 0" class="links-list">
+      <li *ngFor="let link of links">
+        <div class="short-url"><a [href]="link.shortUrl" target="_blank">{{ link.shortUrl }}</a></div>
+        <div class="long-url">{{ link.longUrl }}</div>
+        <div class="click-count">Clicks: {{ link.clickCount }}</div>
+      </li>
+    </ul>
+  </mat-card>
+</main> 

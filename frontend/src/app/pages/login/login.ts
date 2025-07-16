@@ -6,11 +6,16 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ApiService } from '../../services/api';
 import { Dashboard } from '../dashboard/dashboard';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule, RouterModule, Dashboard],
+  imports: [CommonModule, FormsModule, HttpClientModule, RouterModule, Dashboard, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })
@@ -19,6 +24,7 @@ export class Login {
   loginUsername = '';
   password = '';
   error = '';
+  showPassword = false;
 
   constructor(private api: ApiService, private router: Router) {
     const token = localStorage.getItem('jwt');
@@ -28,6 +34,10 @@ export class Login {
         this.username = payload.username;
       } catch {}
     }
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
   }
 
   async onSubmit() {

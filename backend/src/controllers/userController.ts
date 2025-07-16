@@ -47,4 +47,25 @@ export const login = async (req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
   }
+};
+
+export const getUserLinks = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!user || !user.user_id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const result = await pool.query(
+      'SELECT short_id, original_url, click_count FROM urls WHERE user_id = $1 ORDER BY created_at DESC',
+      [user.user_id]
+    );
+    const links = result.rows.map((row: any) => ({
+      shortUrl: `${req.protocol}://${req.get('host')}/${row.short_id}`,
+      longUrl: row.original_url,
+      clickCount: row.click_count
+    }));
+    res.json(links);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch links' });
+  }
 }; 

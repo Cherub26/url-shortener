@@ -1,11 +1,30 @@
 <app-dashboard [username]="username" (logout)="handleLogout()"></app-dashboard>
 <div class="page-bg">
-  <h2>Register</h2>
-  <form (ngSubmit)="onSubmit()" #registerForm="ngForm">
-    <input type="text" name="username" [(ngModel)]="registerUsername" placeholder="Username" required />
-    <input type="password" name="password" [(ngModel)]="password" placeholder="Password" required />
-    <button type="submit">Register</button>
-  </form>
-  <div *ngIf="error" class="error">{{ error }}</div>
-  <p>Already have an account? <a routerLink="/login">Login here</a></p>
+  <mat-card class="register-card mat-elevation-z8">
+    <h2>Register</h2>
+    <form (ngSubmit)="onSubmit()" #registerForm="ngForm">
+      <mat-form-field appearance="fill" class="register-field">
+        <mat-label>Username</mat-label>
+        <input matInput type="text" name="username" [(ngModel)]="registerUsername" required />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="register-field">
+        <mat-label>Password</mat-label>
+        <input matInput [type]="showPassword ? 'text' : 'password'" name="password" [(ngModel)]="password" required />
+        <button mat-icon-button matSuffix type="button" (click)="togglePasswordVisibility()">
+          <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="register-field">
+        <mat-label>Confirm Password</mat-label>
+        <input matInput [type]="showConfirmPassword ? 'text' : 'password'" name="confirmPassword" [(ngModel)]="confirmPassword" required />
+        <button mat-icon-button matSuffix type="button" (click)="toggleConfirmPasswordVisibility()">
+          <mat-icon>{{ showConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+      <button mat-raised-button color="primary" type="submit">Register</button>
+    </form>
+    <div *ngIf="error" class="error">{{ error }}</div>
+    <div *ngIf="password && confirmPassword && password !== confirmPassword" class="error">Passwords do not match</div>
+    <p>Already have an account? <a routerLink="/login">Login here</a></p>
+  </mat-card>
 </div>

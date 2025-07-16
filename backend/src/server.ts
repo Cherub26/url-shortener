@@ -22,7 +22,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // URL-related API and redirect routes
 app.use('/', urlRoutes);
-app.use('/api', userRoutes);
+app.use('/api/user', userRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
