@@ -1,0 +1,20 @@
+<app-dashboard [username]="username" (logout)="handleLogout()"></app-dashboard>
+<main>
+  <div class="center-card">
+    <h1>Shorten your link</h1>
+    <p class="subtitle">Paste your long URL below</p>
+    <form class="shorten-form" (ngSubmit)="shortenUrl()" #shortenForm="ngForm">
+      <input type="url" name="longUrl" [(ngModel)]="longUrl" placeholder="Paste your long URL here" required />
+      <button type="submit">Shorten</button>
+    </form>
+    <div *ngIf="shortUrl" class="short-url-result">
+      <span>Short URL:</span>
+      <a [href]="shortUrl" target="_blank">{{ shortUrl }}</a>
+      <button (click)="copyShortUrl()">Copy</button>
+    </div>
+    <div *ngIf="error" class="error">{{ error }}</div>
+    <div *ngIf="!username" class="guest-info">
+      <p>Want to track your links? <a routerLink="/login">Login</a> or <a routerLink="/register">Register</a></p>
+    </div>
+  </div>
+</main>

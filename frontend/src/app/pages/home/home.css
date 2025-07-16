@@ -1,0 +1,123 @@
+html, body, .page-bg {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #faf8fc;
+}
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+main {
+  min-height: calc(100vh - 64px);
+  height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+}
+.center-card {
+  background: #fff;
+  padding: 2.5rem 2.5rem 2rem 2.5rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(123,31,162,0.08);
+  text-align: center;
+  min-width: 340px;
+  max-width: 420px;
+  width: 100%;
+}
+h1 {
+  margin-bottom: 1.2rem;
+  color: #7b1fa2;
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+.subtitle {
+  color: #555;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+.shorten-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.shorten-form input[type="url"] {
+  flex: 1;
+  padding: 0.9rem 1rem;
+  border: 1.5px solid #b39ddb;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+.shorten-form input[type="url"]:focus {
+  border-color: #7b1fa2;
+}
+.shorten-form button {
+  padding: 0.9rem 1.5rem;
+  background: #7b1fa2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.shorten-form button:hover {
+  background: #512da8;
+}
+.short-url-result {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.short-url-result a {
+  color: #1976d2;
+  font-weight: 600;
+  word-break: break-all;
+}
+.short-url-result button {
+  background: #388e3c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.short-url-result button:hover {
+  background: #2e7d32;
+}
+.error {
+  color: #d32f2f;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+.guest-info {
+  margin-top: 1.5rem;
+  color: #888;
+  font-size: 1rem;
+}
+.guest-info a {
+  color: #7b1fa2;
+  text-decoration: underline;
+  font-weight: 500;
+}
+@media (max-width: 600px) {
+  .center-card {
+    min-width: 0;
+    padding: 1.2rem 0.5rem 1rem 0.5rem;
+  }
+  .dashboard-content {
+    padding: 0.75rem 0.5rem;
+  }
+}
