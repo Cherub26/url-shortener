@@ -1,9 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 
+// Use the environment variable for the backend port
+const BACKEND_HOST = import.meta.env.NG_APP_BACKEND_HOST || 'http://localhost';
+const BACKEND_PORT = import.meta.env.NG_APP_BACKEND_PORT || '3000';
+const BASE_URL = `${BACKEND_HOST}:${BACKEND_PORT}/api`;
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private baseUrl = 'http://localhost:3000/api';
+  private baseUrl = BASE_URL;
 
   constructor(private http: HttpClient) {}
 
