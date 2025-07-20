@@ -26,11 +26,22 @@ const pool = new Pool({
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
     );
   `;
+
+  // Index creation queries for better performance
+  const createIndexesQuery = `
+    CREATE INDEX IF NOT EXISTS idx_urls_short_id ON urls(short_id);
+    CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+    CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id);
+    CREATE INDEX IF NOT EXISTS idx_urls_user_id ON urls(user_id);
+  `;
+
   try {
     await pool.query(createUsersTableQuery);
     await pool.query(createUrlsTableQuery);
+    await pool.query(createIndexesQuery);
+    console.log('Database tables and indexes created successfully');
   } catch (err) {
-    console.error("Error ensuring tables exist:", err);
+    console.error("Error ensuring tables and indexes exist:", err);
   }
 })();
 
