@@ -10,20 +10,33 @@ This application allows users to easily shorten long URLs and track the click st
 - Automatic redirection from short URLs to original URLs
 - Track click (hit) statistics for each short URL
 - Store all URLs and statistics in a PostgreSQL database
+- User authentication (login/registration)
 - Clean and user-friendly interface
 
 ## Technologies Used
 
-- **Backend:** Node.js, Express.js (located in `backend/`)
+- **Backend:** Node.js, Express.js, TypeScript
 - **Database:** PostgreSQL
-- **Frontend:** Angular (located in `frontend/`)
+- **Frontend:** HTML, CSS, JavaScript
+- **Authentication:** JWT tokens
 
 ## Project Structure
 
 ```
 url-shortener/
-  backend/    # Node.js/Express backend
-  frontend/   # Angular frontend
+├── src/                    # TypeScript source code
+│   ├── controllers/        # Route controllers
+│   ├── db/                # Database configuration
+│   ├── middleware/        # Express middleware
+│   ├── routes/            # API routes
+│   ├── utils/             # Utility functions
+│   └── server.ts          # Main server file
+├── public/                # Static frontend files
+│   ├── index.html         # Main HTML file
+│   ├── styles.css         # CSS styles
+│   └── app.js            # Frontend JavaScript
+├── package.json           # Node.js dependencies
+└── tsconfig.json         # TypeScript configuration
 ```
 
 ## Installation
@@ -34,63 +47,64 @@ url-shortener/
    cd url-shortener
    ```
 
-2. **Install dependencies for both backend and frontend:**
+2. **Install dependencies:**
    ```bash
-   cd backend
    npm install
-   cd ../frontend
-   npm install
-   cd ..
    ```
 
 3. **Configure environment variables:**
-   - **Backend:**
-     - Create a PostgreSQL database.
-     - Copy the example file and fill in your values:
-       ```bash
-       cd backend
-       cp .env.example .env
-       ```
-     - Edit `.env` with your settings. Example:
-       ```env
-       DATABASE_URL=postgres://user:password@localhost:5432/database_name
-       PORT=3000
-       JWT_SECRET=your_jwt_secret
-       ```
-   - **Frontend:**
-     - Copy the example file and fill in your values:
-       ```bash
-       cd ../frontend
-       cp .env.example .env
-       ```
-     - Edit `.env` with your settings. Example:
-       ```env
-       NG_APP_BACKEND_PORT=3000
-       NG_APP_BACKEND_HOST=http://localhost
-       ```
+   - Create a PostgreSQL database
+   - Copy the example file and fill in your values:
+     ```bash
+     cp .env.example .env
+     ```
+   - Edit `.env` with your settings. Example:
+     ```env
+     DATABASE_URL=postgres://user:password@localhost:5432/database_name
+     PORT=3000
+     JWT_SECRET=your_jwt_secret
+     ```
 
 4. **Start the application:**
-   - **Backend:**
-     ```bash
-     cd backend
-     npm run dev
-     ```
-   - **Frontend:**
-     ```bash
-     cd ../frontend
-     ng serve
-     ```
-   - The backend will run by default at [http://localhost:3000](http://localhost:3000).
-   - The frontend will typically run at [http://localhost:4200](http://localhost:4200).
+   ```bash
+   # Development mode
+   npm run dev
+   
+   # Production mode
+   npm run build
+   npm start
+   ```
+   
+   The application will run at [http://localhost:3000](http://localhost:3000).
 
 ## Usage
 
-- Enter your long URL on the main page and click the "Shorten" button.
-- Copy and share the generated short URL.
-- When the short URL is accessed, the system automatically redirects to the original URL and increments the click count.
-- You can view the click count for your short URLs on the links page.
+- Enter your long URL on the main page and click the "Shorten" button
+- Copy and share the generated short URL
+- When the short URL is accessed, the system automatically redirects to the original URL and increments the click count
+- You can view the click count for your short URLs on the links page
+- Register/login to manage your shortened links
+
+## API Endpoints
+
+- `POST /api/user/login` - User login
+- `POST /api/user/register` - User registration
+- `POST /api/shorten` - Create short URL
+- `GET /api/user/links` - Get user's links
+- `GET /:shortCode` - Redirect to original URL
 
 ## Development
 
-- To contribute, fork the repository and create a new branch for your feature or bugfix.
-- Please follow the code standards and project conventions when submitting pull requests.
+- The backend is written in TypeScript with Express.js
+- The frontend uses vanilla HTML, CSS, and JavaScript for simplicity and performance
+- No build process required for the frontend - just serve the static files
+- To contribute, fork the repository and create a new branch for your feature or bugfix
+- Please follow the code standards and project conventions when submitting pull requests
+
+## Performance Benefits
+
+- **Fast Loading**: No framework overhead
+- **Small Bundle Size**: Minimal dependencies
+- **Better SEO**: Server-side rendering friendly
+- **Lower Memory Usage**: No framework runtime
+- **Easier Deployment**: Simple static file serving

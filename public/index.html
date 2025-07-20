@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="dashboard-toolbar">
+        <a href="/" class="dashboard-title">URL Shortener</a>
+        <span class="spacer"></span>
+        <div id="user-menu-container">
+            <!-- User menu will be populated by JavaScript -->
+        </div>
+    </nav>
+
+    <!-- Main content area -->
+    <main id="main-content">
+        <!-- Content will be loaded here by JavaScript -->
+    </main>
+
+    <!-- Logout confirmation dialog -->
+    <div id="logout-dialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <h2>Logout</h2>
+            <p>Are you sure you want to logout?</p>
+            <div class="dialog-actions">
+                <button class="btn btn-warn" onclick="confirmLogout()">Yes</button>
+                <button class="btn btn-secondary" onclick="closeLogoutDialog()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
