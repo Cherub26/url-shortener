@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import pool from '../db/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { nanoid } from '../utils/nanoid';
+import { generateUniqueUserId } from '../utils/nanoid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
@@ -16,8 +16,10 @@ export const register = async (req: Request, res: Response) => {
     if (userExists.rows.length > 0) {
       return res.status(409).json({ error: 'Username already taken' });
     }
+    
     const hashedPassword = await bcrypt.hash(password, 10);
-    const randomUserId = nanoid();
+    const randomUserId = await generateUniqueUserId();
+    
     const result = await pool.query(
       'INSERT INTO users (user_id, username, hashed_password) VALUES ($1, $2, $3) RETURNING id, user_id, username',
       [randomUserId, username, hashedPassword]
@@ -25,6 +27,7 @@ export const register = async (req: Request, res: Response) => {
     const user = result.rows[0];
     res.status(201).json({ id: user.id, user_id: user.user_id, username: user.username });
   } catch (err) {
+    console.error('Registration error:', err);
     res.status(500).json({ error: 'Registration failed' });
   }
 };

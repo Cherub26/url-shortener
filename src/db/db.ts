@@ -19,7 +19,7 @@ const pool = new Pool({
   const createUrlsTableQuery = `
     CREATE TABLE IF NOT EXISTS urls (
       id SERIAL PRIMARY KEY,
-      short_id VARCHAR(10) UNIQUE NOT NULL,
+      short_id VARCHAR(12) UNIQUE NOT NULL,
       original_url TEXT NOT NULL,
       click_count INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import pool from '../db/db';
-import { nanoid } from '../utils/nanoid';
+import { generateUniqueShortId } from '../utils/nanoid';
 
 // Helper function to increment click count
 async function incrementClickCount(shortId: string) {
@@ -13,8 +13,9 @@ export const shortenUrl = async (req: Request, res: Response) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ message: 'URL is required' });
 
-  const shortId = nanoid();
   try {
+    const shortId = await generateUniqueShortId();
+    
     // If user is authenticated, associate user_id
     const userId = (req as any).user?.id || null;
     if (userId) {
@@ -44,7 +45,6 @@ export const redirectUrl = async (req: Request, res: Response) => {
     const result = await pool.query('SELECT original_url FROM urls WHERE short_id = $1', [shortId]);
     if (result.rows.length) {
       await incrementClickCount(shortId);
-      // Redirect to the original URL
       return res.redirect(result.rows[0].original_url);
     } else {
       // If short URL not found, serve index.html so frontend router can handle 404
