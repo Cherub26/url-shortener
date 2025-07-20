@@ -224,7 +224,7 @@ class Router {
                 <form class="shorten-form" onsubmit="handleRegister(event)">
                     <div class="form-group">
                         <div class="form-field">
-                            <input type="text" id="registerUsername" placeholder="Username" required />
+                            <input type="text" id="registerUsername" placeholder="Username" required maxlength="20" />
                         </div>
                         <div class="form-field password-field">
                             <input type="password" id="registerPassword" placeholder="Password" required />
@@ -376,6 +376,16 @@ async function handleRegister(event) {
 
     errorDiv.style.display = 'none';
 
+    if (username.length > 20) {
+        errorDiv.textContent = 'Username must be at most 20 characters.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    if (password.length < 8) {
+        errorDiv.textContent = 'Password must be at least 8 characters.';
+        errorDiv.style.display = 'block';
+        return;
+    }
     if (password !== confirmPassword) {
         errorDiv.textContent = 'Passwords do not match';
         errorDiv.style.display = 'block';
