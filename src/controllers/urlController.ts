@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import path from 'path';
 import pool from '../db/db';
 import { generateUniqueShortId } from '../utils/nanoid';
+import { UAParser } from 'ua-parser-js';
+import geoip from 'geoip-lite';
 
 // Helper function to increment click count
 async function incrementClickCount(shortId: string) {
@@ -42,9 +44,26 @@ export const redirectUrl = async (req: Request, res: Response) => {
   const { shortId } = req.params;
   try {
     // Look up original URL in database by shortId
-    const result = await pool.query('SELECT original_url FROM urls WHERE short_id = $1', [shortId]);
+    const result = await pool.query('SELECT id, original_url FROM urls WHERE short_id = $1', [shortId]);
     if (result.rows.length) {
       await incrementClickCount(shortId);
+      // --- Collect click stats ---
+      const urlId = result.rows[0].id;
+      const ip = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || null;
+      const geo = ip ? geoip.lookup(ip) : null;
+      const country = geo?.country || null;
+      const city = geo?.city || null;
+      const userAgent = req.headers['user-agent'] || '';
+      const parser = new UAParser(userAgent);
+      const browser = parser.getBrowser().name || null;
+      const os = parser.getOS().name || null;
+      const device = parser.getDevice().type || 'desktop';
+      await pool.query(
+        `INSERT INTO click_stats (url_id, ip, country, city, browser, os, device, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [urlId, ip, country, city, browser, os, device, userAgent]
+      );
+      // --- End click stats ---
       return res.redirect(result.rows[0].original_url);
     } else {
       // If short URL not found, serve index.html so frontend router can handle 404

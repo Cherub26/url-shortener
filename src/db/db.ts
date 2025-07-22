@@ -26,6 +26,20 @@ const pool = new Pool({
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
     );
   `;
+  const createClickStatsTableQuery = `
+    CREATE TABLE IF NOT EXISTS click_stats (
+      id SERIAL PRIMARY KEY,
+      url_id INTEGER REFERENCES urls(id) ON DELETE CASCADE,
+      timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ip VARCHAR(45),
+      country VARCHAR(64),
+      city VARCHAR(64),
+      browser VARCHAR(64),
+      os VARCHAR(64),
+      device VARCHAR(64),
+      user_agent TEXT
+    );
+  `;
 
   // Index creation queries for better performance
   const createIndexesQuery = `
@@ -33,11 +47,13 @@ const pool = new Pool({
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id);
     CREATE INDEX IF NOT EXISTS idx_urls_user_id ON urls(user_id);
+    CREATE INDEX IF NOT EXISTS idx_click_stats_url_id ON click_stats(url_id);
   `;
 
   try {
     await pool.query(createUsersTableQuery);
     await pool.query(createUrlsTableQuery);
+    await pool.query(createClickStatsTableQuery);
     await pool.query(createIndexesQuery);
     console.log('Database tables and indexes created successfully');
   } catch (err) {
