@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node src/server.ts",
+    "start": "node dist/server.js",
     "dev": "nodemon --exec ts-node src/server.ts --watch src --watch public --ext ts,js,json,html,css --ignore src/**/*.spec.ts"
   },
   "repository": {
@@ -22,9 +22,11 @@
   "homepage": "https://github.com/Cherub26/url-shortener#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "bullmq": "^5.56.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "geoip-lite": "^1.4.10",
+    "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.1.5",
     "pg": "^8.16.3",

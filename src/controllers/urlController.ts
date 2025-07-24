@@ -4,6 +4,8 @@ import pool from '../db/db';
 import { generateUniqueShortId } from '../utils/nanoid';
 import { UAParser } from 'ua-parser-js';
 import geoip from 'geoip-lite';
+import redis from '../utils/redis';
+import { clickStatsQueue } from '../utils/queue';
 
 // Helper function to increment click count
 async function incrementClickCount(shortId: string) {
@@ -43,12 +45,21 @@ export const shortenUrl = async (req: Request, res: Response) => {
 export const redirectUrl = async (req: Request, res: Response) => {
   const { shortId } = req.params;
   try {
-    // Look up original URL in database by shortId
-    const result = await pool.query('SELECT id, original_url FROM urls WHERE short_id = $1', [shortId]);
-    if (result.rows.length) {
-      await incrementClickCount(shortId);
-      // --- Collect click stats ---
-      const urlId = result.rows[0].id;
+    // Try to get original_url and url_id from Redis cache first
+    const cacheKey = `shorturl:${shortId}`;
+    const cachedData = await redis.get(cacheKey);
+    let originalUrl: string | null = null;
+    let urlId: number | null = null;
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        originalUrl = parsed.original_url;
+        urlId = parsed.url_id;
+      } catch (e) {}
+    }
+    if (originalUrl && urlId) {
+      res.redirect(originalUrl as string);
+      // --- Collect click stats asynchronously via BullMQ ---
       const ip = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || null;
       const geo = ip ? geoip.lookup(ip) : null;
       const country = geo?.country || null;
@@ -58,13 +69,49 @@ export const redirectUrl = async (req: Request, res: Response) => {
       const browser = parser.getBrowser().name || null;
       const os = parser.getOS().name || null;
       const device = parser.getDevice().type || 'desktop';
-      await pool.query(
-        `INSERT INTO click_stats (url_id, ip, country, city, browser, os, device, user_agent)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [urlId, ip, country, city, browser, os, device, userAgent]
-      );
-      // --- End click stats ---
-      return res.redirect(result.rows[0].original_url);
+      await clickStatsQueue.add('log-click', {
+        urlId,
+        shortId,
+        ip,
+        country,
+        city,
+        browser,
+        os,
+        device,
+        userAgent
+      });
+      return;
+    }
+    // Not in cache, look up original URL and id in database by shortId
+    const result = await pool.query('SELECT id, original_url FROM urls WHERE short_id = $1', [shortId]);
+    if (result.rows.length) {
+      urlId = result.rows[0].id;
+      originalUrl = result.rows[0].original_url;
+      res.redirect(originalUrl as string);
+      // --- Collect click stats asynchronously via BullMQ ---
+      const ip = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || null;
+      const geo = ip ? geoip.lookup(ip) : null;
+      const country = geo?.country || null;
+      const city = geo?.city || null;
+      const userAgent = req.headers['user-agent'] || '';
+      const parser = new UAParser(userAgent);
+      const browser = parser.getBrowser().name || null;
+      const os = parser.getOS().name || null;
+      const device = parser.getDevice().type || 'desktop';
+      await clickStatsQueue.add('log-click', {
+        urlId,
+        shortId,
+        ip,
+        country,
+        city,
+        browser,
+        os,
+        device,
+        userAgent
+      });
+      // Cache both original_url and url_id in Redis for 10 minutes
+      await redis.set(cacheKey, JSON.stringify({ original_url: originalUrl, url_id: urlId }), 'EX', 600);
+      return;
     } else {
       // If short URL not found, serve index.html so frontend router can handle 404
       return res.sendFile(path.join(__dirname, '../../public/index.html'));
@@ -98,20 +145,20 @@ export const getClickStatsForShortId = async (req: Request, res: Response) => {
 export const getClickStatsSummaryForShortId = async (req: Request, res: Response) => {
   const { shortId } = req.params;
   try {
-    // Get url_id from shortId
-    const urlResult = await pool.query('SELECT id FROM urls WHERE short_id = $1', [shortId]);
+    // Get url_id and click_count from shortId
+    const urlResult = await pool.query('SELECT id, click_count FROM urls WHERE short_id = $1', [shortId]);
     if (!urlResult.rows.length) {
       return res.status(404).json({ message: 'Short URL not found' });
     }
     const urlId = urlResult.rows[0].id;
+    const clickCount = urlResult.rows[0].click_count;
     // Aggregate stats
-    const totalClicksResult = await pool.query('SELECT COUNT(*) FROM click_stats WHERE url_id = $1', [urlId]);
     const byCountryResult = await pool.query('SELECT country, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY country ORDER BY COUNT(*) DESC', [urlId]);
     const byBrowserResult = await pool.query('SELECT browser, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY browser ORDER BY COUNT(*) DESC', [urlId]);
     const byOsResult = await pool.query('SELECT os, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY os ORDER BY COUNT(*) DESC', [urlId]);
     const byDeviceResult = await pool.query('SELECT device, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY device ORDER BY COUNT(*) DESC', [urlId]);
     res.json({
-      totalClicks: parseInt(totalClicksResult.rows[0].count, 10),
+      totalClicks: clickCount,
       byCountry: byCountryResult.rows,
       byBrowser: byBrowserResult.rows,
       byOs: byOsResult.rows,

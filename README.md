@@ -10,6 +10,7 @@ This application allows users to easily shorten long URLs and track the click st
 - Automatic redirection from short URLs to original URLs
 - Track click (hit) statistics for each short URL
 - Store all URLs and statistics in a PostgreSQL database
+- **Cache frequently accessed URLs in Redis for faster redirects**
 - User authentication (login/registration)
 - Clean and user-friendly interface
 
@@ -19,6 +20,7 @@ This application allows users to easily shorten long URLs and track the click st
 - **Database:** PostgreSQL
 - **Frontend:** HTML, CSS, JavaScript
 - **Authentication:** JWT tokens
+- **Caching/Queue:** Redis (for background jobs and caching)
 
 ## Project Structure
 
@@ -26,17 +28,21 @@ This application allows users to easily shorten long URLs and track the click st
 url-shortener/
 ├── src/                    # TypeScript source code
 │   ├── controllers/        # Route controllers
-│   ├── db/                # Database configuration
-│   ├── middleware/        # Express middleware
-│   ├── routes/            # API routes
-│   ├── utils/             # Utility functions
-│   └── server.ts          # Main server file
-├── public/                # Static frontend files
-│   ├── index.html         # Main HTML file
-│   ├── styles.css         # CSS styles
-│   └── app.js            # Frontend JavaScript
-├── package.json           # Node.js dependencies
-└── tsconfig.json         # TypeScript configuration
+│   ├── db/                 # Database configuration
+│   ├── middleware/         # Express middleware
+│   ├── routes/             # API routes
+│   ├── utils/              # Utility functions (e.g., nanoid, queue, redis)
+│   │   ├── nanoid.ts
+│   │   ├── queue.ts        # Queue utilities for background jobs
+│   │   └── redis.ts        # Redis connection and helpers
+│   ├── workers/            # Background workers (e.g., clickStatsWorker)
+│   └── server.ts           # Main server file
+├── public/                 # Static frontend files
+│   ├── index.html          # Main HTML file
+│   ├── styles.css          # CSS styles
+│   └── app.js              # Frontend JavaScript
+├── package.json            # Node.js dependencies
+└── tsconfig.json           # TypeScript configuration
 ```
 
 ## Installation
@@ -54,6 +60,9 @@ url-shortener/
 
 3. **Configure environment variables:**
    - Create a PostgreSQL database
+   - **Ensure you have a Redis server running.** 
+   The application requires Redis for background job processing and caching. 
+   [Redis Quick Start](https://redis.io/docs/getting-started/) 
    - Copy the example file and fill in your values:
      ```bash
      cp .env.example .env
@@ -63,6 +72,10 @@ url-shortener/
      DATABASE_URL=postgres://user:password@localhost:5432/database_name
      PORT=3000
      JWT_SECRET=your_jwt_secret
+     REDIS_HOST=localhost
+     REDIS_PORT=6379
+     REDIS_PASSWORD=yourpassword
+     REDIS_DB=0
      ```
 
 4. **Start the application:**
@@ -75,7 +88,7 @@ url-shortener/
    npm start
    ```
    
-   The application will run at [http://localhost:3000](http://localhost:3000).
+   The application will run at [http://localhost:3000](http://localhost:3000) by default.
 
 ## Usage
 
@@ -90,8 +103,11 @@ url-shortener/
 - `POST /api/user/login` - User login
 - `POST /api/user/register` - User registration
 - `POST /api/shorten` - Create short URL
+- `DELETE /api/shorten/:shortId` - Delete a short URL
 - `GET /api/user/links` - Get user's links
 - `GET /:shortCode` - Redirect to original URL
+- `GET /api/stats/:shortId` - Get click stats for a short URL
+- `GET /api/stats/:shortId/summary` - Get summary stats for a short URL
 
 ## Development
 

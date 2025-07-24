@@ -1,6 +1,5 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
-import { nanoid } from '../utils/nanoid';
 dotenv.config();
 
 const pool = new Pool({
