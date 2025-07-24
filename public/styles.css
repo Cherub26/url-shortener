@@ -309,6 +309,28 @@ h2 {
     border: 1.5px solid #7b1fa2;
 }
 
+.btn-delete {
+    background: linear-gradient(90deg, #ff5252 0%, #ff1744 100%);
+    color: #fff;
+    border: 1.5px solid #ff5252;
+    font-size: 0.92rem;
+    padding: 0.4rem 1.2rem;
+    border-radius: 16px;
+    margin-top: 0.5rem;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+    margin-left: 1rem;
+    float: right;
+}
+
+.btn-delete:hover {
+    background: linear-gradient(90deg, #ff1744 0%, #ff5252 100%);
+    color: #eedee7;
+    border: 1.5px solid #ff1744;
+}
+
 /* Result styles */
 .short-url-result {
     margin-bottom: 1rem;

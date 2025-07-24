@@ -53,12 +53,14 @@ class ApiService {
 
         try {
             const response = await fetch(url, config);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || data.message || 'Request failed');
+            let data = null;
+            if (response.status !== 204) {
+                const text = await response.text();
+                data = text ? JSON.parse(text) : null;
             }
-
+            if (!response.ok) {
+                throw new Error((data && (data.error || data.message)) || 'Request failed');
+            }
             return data;
         } catch (error) {
             throw error;
@@ -89,6 +91,12 @@ class ApiService {
     async getUserLinks() {
         return this.request('/user/links', {
             method: 'GET'
+        });
+    }
+
+    async deleteUserLink(shortId) {
+        return this.request(`/shorten/${shortId}`, {
+            method: 'DELETE'
         });
     }
 }
@@ -293,10 +301,11 @@ class Router {
 
             if (links && links.length > 0) {
                 const linksList = links.map((link, idx) => `
-                    <div class="link-item" id="link-item-${idx}">
+                    <div class="link-item" id="link-item-${idx}" style="position: relative; overflow: hidden;">
                         <h3><a href="${link.shortUrl}" target="_blank" rel="noopener noreferrer">${link.shortUrl}</a></h3>
                         <p>${link.longUrl}</p>
                         <button class="btn btn-stats" onclick="showLinkStats('${link.shortUrl.split('/').pop()}', ${idx})">Statistics</button>
+                        <button class="btn btn-delete" onclick="openDeleteDialog('${link.shortUrl.split('/').pop()}', ${idx})">Delete</button>
                         <div class="stats-summary" id="stats-summary-${idx}" style="display:none;"></div>
                     </div>
                 `).join('');
@@ -345,6 +354,35 @@ window.showLinkStats = async function(shortId, idx) {
     } catch (error) {
         statsDiv.innerHTML = `<div class="error">${error.message}</div>`;
     }
+};
+
+let deleteDialogShortId = null;
+let deleteDialogIdx = null;
+
+window.openDeleteDialog = function(shortId, idx) {
+    deleteDialogShortId = shortId;
+    deleteDialogIdx = idx;
+    document.getElementById('delete-dialog').style.display = 'flex';
+};
+
+window.closeDeleteDialog = function() {
+    deleteDialogShortId = null;
+    deleteDialogIdx = null;
+    document.getElementById('delete-dialog').style.display = 'none';
+};
+
+window.confirmDeleteLink = async function() {
+    if (!deleteDialogShortId) return;
+    try {
+        await api.deleteUserLink(deleteDialogShortId);
+        showToast('Link deleted successfully!');
+        // Remove the link from the UI
+        const linkItem = document.getElementById(`link-item-${deleteDialogIdx}`);
+        if (linkItem) linkItem.remove();
+    } catch (error) {
+        showToast(error.message || 'Failed to delete link', 'error');
+    }
+    closeDeleteDialog();
 };
 
 // Event handlers

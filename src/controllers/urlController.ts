@@ -122,3 +122,25 @@ export const getClickStatsSummaryForShortId = async (req: Request, res: Response
     res.status(500).json({ message: 'Failed to fetch click stats summary' });
   }
 }; 
+
+// Delete a short URL (only by owner)
+export const deleteUrl = async (req: Request, res: Response) => {
+  const { shortId } = req.params;
+  const user = (req as any).user;
+  if (!user || !user.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    // Check if the URL exists and belongs to the user
+    const urlResult = await pool.query('SELECT id FROM urls WHERE short_id = $1 AND user_id = $2', [shortId, user.id]);
+    if (!urlResult.rows.length) {
+      return res.status(404).json({ error: 'URL not found or not owned by user' });
+    }
+    // Delete the URL
+    await pool.query('DELETE FROM urls WHERE short_id = $1 AND user_id = $2', [shortId, user.id]);
+    return res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting URL:', err);
+    res.status(500).json({ error: 'Failed to delete URL' });
+  }
+}; 
