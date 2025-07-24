@@ -135,6 +135,15 @@ main {
     margin-top: 64px;
 }
 
+/* Only top-align for links page */
+main.links-top-align {
+    height: auto;
+    display: block;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin-top: 64px;
+}
+
 /* Card styles */
 .center-card {
     background: #3e143e;
@@ -280,6 +289,26 @@ h2 {
     background: #2d1847;
 }
 
+.btn-stats {
+    background: linear-gradient(90deg, #a259f7 0%, #7b1fa2 100%);
+    color: #fff;
+    border: 1.5px solid #a259f7;
+    font-size: 0.92rem;
+    padding: 0.4rem 1rem;
+    border-radius: 16px;
+    margin-top: 0.5rem;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+
+.btn-stats:hover {
+    background: linear-gradient(90deg, #7b1fa2 0%, #a259f7 100%);
+    color: #eedee7;
+    border: 1.5px solid #7b1fa2;
+}
+
 /* Result styles */
 .short-url-result {
     margin-bottom: 1rem;
@@ -346,6 +375,11 @@ h2 {
     width: 100%;
     max-width: 800px;
     padding: 2rem;
+    margin: 0 auto;
+    margin-top: 1.2rem; /* Reduce top margin for more top alignment */
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
 }
 
 .links-card {
@@ -353,6 +387,8 @@ h2 {
     border-radius: 14px;
     padding: 2rem;
     box-shadow: 0 4px 24px rgba(123, 31, 162, 0.18);
+    width: 100%;
+    margin: 0 auto;
 }
 
 .links-list {
@@ -475,10 +511,22 @@ h2 {
         margin-top: 56px;
         min-height: calc(100vh - 56px);
         height: calc(100vh - 56px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    main.links-top-align {
+        margin-top: 56px;
+        min-height: calc(100vh - 56px);
+        height: auto;
+        display: block;
+        align-items: flex-start;
+        justify-content: flex-start;
     }
 
     .links-container {
         padding: 1rem;
+        margin-top: 0.5rem;
     }
 
     .short-url-result {

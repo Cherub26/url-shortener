@@ -152,6 +152,7 @@ class Router {
 
     showHome() {
         const mainContent = document.getElementById('main-content');
+        document.querySelector('main').classList.remove('links-top-align');
         mainContent.innerHTML = `
             <div class="center-card">
                 <h1>Shorten your link</h1>
@@ -185,6 +186,7 @@ class Router {
         }
 
         const mainContent = document.getElementById('main-content');
+        document.querySelector('main').classList.remove('links-top-align');
         mainContent.innerHTML = `
             <div class="center-card">
                 <h1>Login</h1>
@@ -218,6 +220,7 @@ class Router {
         }
 
         const mainContent = document.getElementById('main-content');
+        document.querySelector('main').classList.remove('links-top-align');
         mainContent.innerHTML = `
             <div class="center-card">
                 <h1>Register</h1>
@@ -256,6 +259,7 @@ class Router {
         }
 
         const mainContent = document.getElementById('main-content');
+        document.querySelector('main').classList.add('links-top-align');
         mainContent.innerHTML = `
             <div class="links-container">
                 <div class="links-card">
@@ -272,6 +276,7 @@ class Router {
 
     showNotFound() {
         const mainContent = document.getElementById('main-content');
+        document.querySelector('main').classList.remove('links-top-align');
         mainContent.innerHTML = `
             <div class="center-card">
                 <h1>404 - Page Not Found</h1>
@@ -287,11 +292,12 @@ class Router {
             const linksContent = document.getElementById('linksContent');
 
             if (links && links.length > 0) {
-                const linksList = links.map(link => `
-                    <div class="link-item">
+                const linksList = links.map((link, idx) => `
+                    <div class="link-item" id="link-item-${idx}">
                         <h3><a href="${link.shortUrl}" target="_blank" rel="noopener noreferrer">${link.shortUrl}</a></h3>
                         <p>${link.longUrl}</p>
-                        <div class="link-stats">Clicks: ${link.clickCount || 0}</div>
+                        <button class="btn btn-stats" onclick="showLinkStats('${link.shortUrl.split('/').pop()}', ${idx})">Statistics</button>
+                        <div class="stats-summary" id="stats-summary-${idx}" style="display:none;"></div>
                     </div>
                 `).join('');
 
@@ -312,6 +318,34 @@ class Router {
         }
     }
 }
+
+// Add global function to fetch and show stats
+window.showLinkStats = async function(shortId, idx) {
+    const statsDiv = document.getElementById(`stats-summary-${idx}`);
+    if (statsDiv.style.display === 'block') {
+        statsDiv.style.display = 'none';
+        statsDiv.innerHTML = '';
+        return;
+    }
+    statsDiv.style.display = 'block';
+    statsDiv.innerHTML = '<div class="loading">Loading statistics...</div>';
+    try {
+        const response = await fetch(`/api/stats/${shortId}/summary`);
+        if (!response.ok) throw new Error('Failed to fetch statistics');
+        const stats = await response.json();
+        statsDiv.innerHTML = `
+            <div class="stats-block">
+                <strong>Total Clicks:</strong> ${stats.totalClicks}<br/>
+                <strong>By Country:</strong> ${stats.byCountry.map(c => `${c.country || 'Unknown'} (${c.count})`).join(', ') || 'None'}<br/>
+                <strong>By Browser:</strong> ${stats.byBrowser.map(b => `${b.browser || 'Unknown'} (${b.count})`).join(', ') || 'None'}<br/>
+                <strong>By OS:</strong> ${stats.byOs.map(o => `${o.os || 'Unknown'} (${o.count})`).join(', ') || 'None'}<br/>
+                <strong>By Device:</strong> ${stats.byDevice.map(d => `${d.device || 'Unknown'} (${d.count})`).join(', ') || 'None'}
+            </div>
+        `;
+    } catch (error) {
+        statsDiv.innerHTML = `<div class="error">${error.message}</div>`;
+    }
+};
 
 // Event handlers
 async function handleShortenUrl(event) {

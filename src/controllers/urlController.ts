@@ -74,3 +74,51 @@ export const redirectUrl = async (req: Request, res: Response) => {
     res.status(500).send('Server error');
   }
 }; 
+
+// Get all click stats for a shortId
+export const getClickStatsForShortId = async (req: Request, res: Response) => {
+  const { shortId } = req.params;
+  try {
+    // Get url_id from shortId
+    const urlResult = await pool.query('SELECT id FROM urls WHERE short_id = $1', [shortId]);
+    if (!urlResult.rows.length) {
+      return res.status(404).json({ message: 'Short URL not found' });
+    }
+    const urlId = urlResult.rows[0].id;
+    // Get all click stats for this url_id
+    const statsResult = await pool.query('SELECT * FROM click_stats WHERE url_id = $1 ORDER BY timestamp DESC', [urlId]);
+    res.json(statsResult.rows);
+  } catch (err) {
+    console.error('Error fetching click stats:', err);
+    res.status(500).json({ message: 'Failed to fetch click stats' });
+  }
+};
+
+// Get summary stats for a shortId
+export const getClickStatsSummaryForShortId = async (req: Request, res: Response) => {
+  const { shortId } = req.params;
+  try {
+    // Get url_id from shortId
+    const urlResult = await pool.query('SELECT id FROM urls WHERE short_id = $1', [shortId]);
+    if (!urlResult.rows.length) {
+      return res.status(404).json({ message: 'Short URL not found' });
+    }
+    const urlId = urlResult.rows[0].id;
+    // Aggregate stats
+    const totalClicksResult = await pool.query('SELECT COUNT(*) FROM click_stats WHERE url_id = $1', [urlId]);
+    const byCountryResult = await pool.query('SELECT country, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY country ORDER BY COUNT(*) DESC', [urlId]);
+    const byBrowserResult = await pool.query('SELECT browser, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY browser ORDER BY COUNT(*) DESC', [urlId]);
+    const byOsResult = await pool.query('SELECT os, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY os ORDER BY COUNT(*) DESC', [urlId]);
+    const byDeviceResult = await pool.query('SELECT device, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY device ORDER BY COUNT(*) DESC', [urlId]);
+    res.json({
+      totalClicks: parseInt(totalClicksResult.rows[0].count, 10),
+      byCountry: byCountryResult.rows,
+      byBrowser: byBrowserResult.rows,
+      byOs: byOsResult.rows,
+      byDevice: byDeviceResult.rows
+    });
+  } catch (err) {
+    console.error('Error fetching click stats summary:', err);
+    res.status(500).json({ message: 'Failed to fetch click stats summary' });
+  }
+}; 
