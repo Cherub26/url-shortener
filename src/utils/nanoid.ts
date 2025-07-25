@@ -1,10 +1,14 @@
-import { customAlphabet } from 'nanoid';
 import pool from '../db/db';
 
-export const nanoid = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 10);
+const getNanoid = async () => {
+  const { customAlphabet } = await import('nanoid');
+  return customAlphabet('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 10);
+}
+
 
 // Generate a unique user_id with collision handling
 export const generateUniqueUserId = async (maxRetries: number = 5): Promise<string> => {
+  const nanoid = await getNanoid();
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const userId = nanoid();
     
@@ -26,6 +30,7 @@ export const generateUniqueUserId = async (maxRetries: number = 5): Promise<stri
 
 // Generate a unique short_id with collision handling
 export const generateUniqueShortId = async (maxRetries: number = 5): Promise<string> => {
+  const nanoid = await getNanoid();
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const shortId = nanoid();
     
