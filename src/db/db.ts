@@ -21,7 +21,7 @@ const pool = new Pool({
       short_id VARCHAR(12) UNIQUE NOT NULL,
       original_url TEXT NOT NULL,
       click_count INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC'),
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
     );
   `;
@@ -29,7 +29,7 @@ const pool = new Pool({
     CREATE TABLE IF NOT EXISTS click_stats (
       id SERIAL PRIMARY KEY,
       url_id INTEGER REFERENCES urls(id) ON DELETE CASCADE,
-      timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      timestamp TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
       ip VARCHAR(45),
       country VARCHAR(64),
       city VARCHAR(64),

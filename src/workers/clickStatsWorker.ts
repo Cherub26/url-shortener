@@ -18,8 +18,8 @@ export function startClickStatsWorker() {
     );
 
     await pool.query(
-      `INSERT INTO click_stats (url_id, ip, country, city, browser, os, device, user_agent)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO click_stats (url_id, timestamp, ip, country, city, browser, os, device, user_agent)
+       VALUES ($1, NOW() AT TIME ZONE 'UTC', $2, $3, $4, $5, $6, $7, $8)`,
       [urlId, ip, country, city, browser, os, device, userAgent]
     );
   }, { connection });

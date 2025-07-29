@@ -12,6 +12,31 @@ async function incrementClickCount(shortId: string) {
   await pool.query('UPDATE urls SET click_count = click_count + 1 WHERE short_id = $1', [shortId]);
 }
 
+// Helper function to collect click stats
+async function collectClickStats(urlId: number, shortId: string, req: Request) {
+  const ip = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || null;
+  const geo = ip ? geoip.lookup(ip) : null;
+  const country = geo?.country || null;
+  const city = geo?.city || null;
+  const userAgent = req.headers['user-agent'] || '';
+  const parser = new UAParser(userAgent);
+  const browser = parser.getBrowser().name || null;
+  const os = parser.getOS().name || null;
+  const device = parser.getDevice().type || 'desktop';
+  
+  await clickStatsQueue.add('log-click', {
+    urlId,
+    shortId,
+    ip,
+    country,
+    city,
+    browser,
+    os,
+    device,
+    userAgent
+  });
+}
+
 // Shorten a long URL
 export const shortenUrl = async (req: Request, res: Response) => {
   const { url } = req.body;
@@ -59,27 +84,8 @@ export const redirectUrl = async (req: Request, res: Response) => {
     }
     if (originalUrl && urlId) {
       res.redirect(originalUrl as string);
-      // --- Collect click stats asynchronously via BullMQ ---
-      const ip = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || null;
-      const geo = ip ? geoip.lookup(ip) : null;
-      const country = geo?.country || null;
-      const city = geo?.city || null;
-      const userAgent = req.headers['user-agent'] || '';
-      const parser = new UAParser(userAgent);
-      const browser = parser.getBrowser().name || null;
-      const os = parser.getOS().name || null;
-      const device = parser.getDevice().type || 'desktop';
-      await clickStatsQueue.add('log-click', {
-        urlId,
-        shortId,
-        ip,
-        country,
-        city,
-        browser,
-        os,
-        device,
-        userAgent
-      });
+      // Collect click stats asynchronously
+      await collectClickStats(urlId!, shortId, req);
       return;
     }
     // Not in cache, look up original URL and id in database by shortId
@@ -88,27 +94,10 @@ export const redirectUrl = async (req: Request, res: Response) => {
       urlId = result.rows[0].id;
       originalUrl = result.rows[0].original_url;
       res.redirect(originalUrl as string);
-      // --- Collect click stats asynchronously via BullMQ ---
-      const ip = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || null;
-      const geo = ip ? geoip.lookup(ip) : null;
-      const country = geo?.country || null;
-      const city = geo?.city || null;
-      const userAgent = req.headers['user-agent'] || '';
-      const parser = new UAParser(userAgent);
-      const browser = parser.getBrowser().name || null;
-      const os = parser.getOS().name || null;
-      const device = parser.getDevice().type || 'desktop';
-      await clickStatsQueue.add('log-click', {
-        urlId,
-        shortId,
-        ip,
-        country,
-        city,
-        browser,
-        os,
-        device,
-        userAgent
-      });
+      
+      // Collect click stats asynchronously
+      await collectClickStats(urlId!, shortId, req);
+      
       // Cache both original_url and url_id in Redis for 10 minutes
       await redis.set(cacheKey, JSON.stringify({ original_url: originalUrl, url_id: urlId }), 'EX', 600);
       return;
