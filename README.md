@@ -16,8 +16,8 @@ This application allows users to easily shorten long URLs and track the click st
 
 ## Technologies Used
 
-- **Backend:** Node.js, Express.js, TypeScript
-- **Database:** PostgreSQL
+- **Backend:** Node.js (Used version v22.x), Express.js, TypeScript
+- **Database:** PostgreSQL (Used version v17.x)
 - **Frontend:** HTML, CSS, JavaScript
 - **Authentication:** JWT tokens
 - **Caching/Queue:** Redis (for background jobs and caching)
