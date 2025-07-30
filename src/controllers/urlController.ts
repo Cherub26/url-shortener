@@ -7,9 +7,61 @@ import geoip from 'geoip-lite';
 import redis from '../utils/redis';
 import { clickStatsQueue } from '../utils/queue';
 
-// Helper function to increment click count
-async function incrementClickCount(shortId: string) {
-  await pool.query('UPDATE urls SET click_count = click_count + 1 WHERE short_id = $1', [shortId]);
+async function aggregateClickStats(urlId: number) {
+  const statsResult = await pool.query(`
+    SELECT 
+      country,
+      browser,
+      os,
+      device,
+      COUNT(*) as count
+    FROM click_stats 
+    WHERE url_id = $1
+    GROUP BY country, browser, os, device
+    ORDER BY count DESC
+  `, [urlId]);
+
+  const byCountry = new Map();
+  const byBrowser = new Map();
+  const byOs = new Map();
+  const byDevice = new Map();
+
+  statsResult.rows.forEach(row => {
+    // Handle null values by using 'Unknown' as the default
+    const country = row.country || 'Unknown';
+    const browser = row.browser || 'Unknown';
+    const os = row.os || 'Unknown';
+    const device = row.device || 'Unknown';
+    
+    byCountry.set(country, (byCountry.get(country) || 0) + parseInt(row.count));
+    byBrowser.set(browser, (byBrowser.get(browser) || 0) + parseInt(row.count));
+    byOs.set(os, (byOs.get(os) || 0) + parseInt(row.count));
+    byDevice.set(device, (byDevice.get(device) || 0) + parseInt(row.count));
+  });
+
+  // Convert maps to sorted arrays
+  const byCountryArray = Array.from(byCountry.entries())
+    .map(([country, count]) => ({ country, count }))
+    .sort((a, b) => b.count - a.count);
+  
+  const byBrowserArray = Array.from(byBrowser.entries())
+    .map(([browser, count]) => ({ browser, count }))
+    .sort((a, b) => b.count - a.count);
+  
+  const byOsArray = Array.from(byOs.entries())
+    .map(([os, count]) => ({ os, count }))
+    .sort((a, b) => b.count - a.count);
+  
+  const byDeviceArray = Array.from(byDevice.entries())
+    .map(([device, count]) => ({ device, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    byCountry: byCountryArray,
+    byBrowser: byBrowserArray,
+    byOs: byOsArray,
+    byDevice: byDeviceArray
+  };
 }
 
 // Helper function to collect click stats
@@ -141,17 +193,13 @@ export const getClickStatsSummaryForShortId = async (req: Request, res: Response
     }
     const urlId = urlResult.rows[0].id;
     const clickCount = urlResult.rows[0].click_count;
-    // Aggregate stats
-    const byCountryResult = await pool.query('SELECT country, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY country ORDER BY COUNT(*) DESC', [urlId]);
-    const byBrowserResult = await pool.query('SELECT browser, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY browser ORDER BY COUNT(*) DESC', [urlId]);
-    const byOsResult = await pool.query('SELECT os, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY os ORDER BY COUNT(*) DESC', [urlId]);
-    const byDeviceResult = await pool.query('SELECT device, COUNT(*) FROM click_stats WHERE url_id = $1 GROUP BY device ORDER BY COUNT(*) DESC', [urlId]);
+
+    // Use the helper function to aggregate stats
+    const aggregatedStats = await aggregateClickStats(urlId);
+
     res.json({
       totalClicks: clickCount,
-      byCountry: byCountryResult.rows,
-      byBrowser: byBrowserResult.rows,
-      byOs: byOsResult.rows,
-      byDevice: byDeviceResult.rows
+      ...aggregatedStats
     });
   } catch (err) {
     console.error('Error fetching click stats summary:', err);
