@@ -3,6 +3,7 @@ import pool from '../db/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { generateUniqueUserId } from '../utils/nanoid';
+import { UrlRow, UserRow } from '../types/database';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
@@ -24,7 +25,7 @@ export const register = async (req: Request, res: Response) => {
       'INSERT INTO users (user_id, username, hashed_password) VALUES ($1, $2, $3) RETURNING id, user_id, username',
       [randomUserId, username, hashedPassword]
     );
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
     res.status(201).json({ id: user.id, user_id: user.user_id, username: user.username });
   } catch (err) {
     console.error('Registration error:', err);
@@ -42,7 +43,7 @@ export const login = async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
     const match = await bcrypt.compare(password, user.hashed_password);
     if (!match) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -55,7 +56,7 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const getUserLinks = async (req: Request, res: Response) => {
-  const user = (req as any).user;
+  const user = req.user;
   if (!user || !user.id) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -64,7 +65,7 @@ export const getUserLinks = async (req: Request, res: Response) => {
       'SELECT short_id, original_url, click_count FROM urls WHERE user_id = $1 ORDER BY created_at DESC',
       [user.id]
     );
-    const links = result.rows.map((row: any) => ({
+    const links = result.rows.map((row: UrlRow) => ({
       shortUrl: `${req.protocol}://${req.get('host')}/${row.short_id}`,
       longUrl: row.original_url,
       clickCount: row.click_count

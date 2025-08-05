@@ -6,6 +6,7 @@ import { UAParser } from 'ua-parser-js';
 import geoip from 'geoip-lite';
 import redis from '../utils/redis';
 import { clickStatsQueue } from '../utils/queue';
+import { AggregatedStatsRow, UrlIdRow, ClickStatsRow } from '../types/database';
 
 async function aggregateClickStats(urlId: number) {
   const statsResult = await pool.query(`
@@ -26,7 +27,7 @@ async function aggregateClickStats(urlId: number) {
   const byOs = new Map();
   const byDevice = new Map();
 
-  statsResult.rows.forEach(row => {
+  statsResult.rows.forEach((row: AggregatedStatsRow) => {
     // Handle null values by using 'Unknown' as the default
     const country = row.country || 'Unknown';
     const browser = row.browser || 'Unknown';
@@ -98,7 +99,7 @@ export const shortenUrl = async (req: Request, res: Response) => {
     const shortId = await generateUniqueShortId();
     
     // If user is authenticated, associate user_id
-    const userId = (req as any).user?.id || null;
+    const userId = req.user?.id || null;
     if (userId) {
       await pool.query(
         'INSERT INTO urls (short_id, original_url, click_count, user_id) VALUES ($1, $2, $3, $4)',
@@ -143,8 +144,9 @@ export const redirectUrl = async (req: Request, res: Response) => {
     // Not in cache, look up original URL and id in database by shortId
     const result = await pool.query('SELECT id, original_url FROM urls WHERE short_id = $1', [shortId]);
     if (result.rows.length) {
-      urlId = result.rows[0].id;
-      originalUrl = result.rows[0].original_url;
+      const urlRow = result.rows[0] as UrlIdRow;
+      urlId = urlRow.id;
+      originalUrl = urlRow.original_url!;
       res.redirect(originalUrl as string);
       
       // Collect click stats asynchronously
@@ -154,8 +156,7 @@ export const redirectUrl = async (req: Request, res: Response) => {
       await redis.set(cacheKey, JSON.stringify({ original_url: originalUrl, url_id: urlId }), 'EX', 600);
       return;
     } else {
-      // If short URL not found, serve index.html so frontend router can handle 404
-      return res.sendFile(path.join(__dirname, '../../public/index.html'));
+      return res.status(404).json({ error: 'Short URL not found' });
     }
   } catch (err) {
     console.error('Error during redirect:', err);
@@ -172,10 +173,11 @@ export const getClickStatsForShortId = async (req: Request, res: Response) => {
     if (!urlResult.rows.length) {
       return res.status(404).json({ message: 'Short URL not found' });
     }
-    const urlId = urlResult.rows[0].id;
+    const urlRow = urlResult.rows[0] as UrlIdRow;
+    const urlId = urlRow.id;
     // Get all click stats for this url_id
     const statsResult = await pool.query('SELECT * FROM click_stats WHERE url_id = $1 ORDER BY timestamp DESC', [urlId]);
-    res.json(statsResult.rows);
+    res.json(statsResult.rows as ClickStatsRow[]);
   } catch (err) {
     console.error('Error fetching click stats:', err);
     res.status(500).json({ message: 'Failed to fetch click stats' });
@@ -191,8 +193,9 @@ export const getClickStatsSummaryForShortId = async (req: Request, res: Response
     if (!urlResult.rows.length) {
       return res.status(404).json({ message: 'Short URL not found' });
     }
-    const urlId = urlResult.rows[0].id;
-    const clickCount = urlResult.rows[0].click_count;
+    const urlRow = urlResult.rows[0] as UrlIdRow;
+    const urlId = urlRow.id;
+    const clickCount = urlRow.click_count!;
 
     // Use the helper function to aggregate stats
     const aggregatedStats = await aggregateClickStats(urlId);
@@ -210,7 +213,7 @@ export const getClickStatsSummaryForShortId = async (req: Request, res: Response
 // Delete a short URL (only by owner)
 export const deleteUrl = async (req: Request, res: Response) => {
   const { shortId } = req.params;
-  const user = (req as any).user;
+  const user = req.user;
   if (!user || !user.id) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
