@@ -4,13 +4,15 @@ export interface UrlRow {
   click_count: number;
   created_at: Date;
   user_id?: number;
+  is_active: boolean;
+  expires_at: string | null;
 }
 
 export interface UserRow {
   id: number;
   user_id: string;
   username: string;
-  hashed_password: string;
+  password: string;
   created_at: Date;
 }
 

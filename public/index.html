@@ -48,6 +48,30 @@
         </div>
     </div>
 
+    <!-- Edit expiration dialog -->
+    <div id="edit-dialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <h2>Edit Link Expiration</h2>
+            <p>Set a new expiration date for this link:</p>
+            <div class="form-field">
+                <label for="editExpirationPreset" style="color:#eedee7; font-size:0.95rem; margin-bottom:0.2rem; display:block;">Expiration:</label>
+                <select id="editExpirationPreset" style="width:100%; padding:0.5rem; border-radius:6px; border:1.5px solid #e040fb; background:#3e143e; color:#eedee7; margin-bottom:0.5rem;">
+                    <option value="">No expiration</option>
+                    <option value="1d">1 day</option>
+                    <option value="1w">1 week</option>
+                    <option value="1m">1 month</option>
+                    <option value="1y">1 year</option>
+                    <option value="custom">Custom date & time</option>
+                </select>
+                <input type="datetime-local" id="editCustomExpirationDate" step="60" style="width:100%; padding:0.5rem; border-radius:6px; border:1.5px solid #e040fb; background:#3e143e; color:#eedee7; display:none; margin-top:0.3rem;" />
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-primary" onclick="confirmEditLink()">Update</button>
+                <button class="btn btn-secondary" onclick="closeEditDialog()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 

@@ -331,6 +331,28 @@ h2 {
     border: 1.5px solid #ff1744;
 }
 
+.btn-edit {
+    background: linear-gradient(90deg, #4caf50 0%, #2e7d32 100%);
+    color: #fff;
+    border: 1.5px solid #4caf50;
+    font-size: 0.92rem;
+    padding: 0.4rem 1.2rem;
+    border-radius: 16px;
+    margin-top: 0.5rem;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+    margin-left: 1rem;
+    float: right;
+}
+
+.btn-edit:hover {
+    background: linear-gradient(90deg, #2e7d32 0%, #4caf50 100%);
+    color: #eedee7;
+    border: 1.5px solid #2e7d32;
+}
+
 /* Result styles */
 .short-url-result {
     margin-bottom: 1rem;
@@ -606,4 +628,29 @@ h2 {
     .toast.show {
         transform: translateY(0);
     }
+}
+
+.link-status {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+.link-status-active {
+    background: #2e7d32;
+    color: #fff;
+}
+.link-status-inactive {
+    background: #bdbdbd;
+    color: #333;
+}
+.link-status-expired {
+    background: #ff5252;
+    color: #fff;
+}
+.link-item-inactive {
+    opacity: 0.6;
 }

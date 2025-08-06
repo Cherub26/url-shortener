@@ -12,7 +12,7 @@ const pool = new Pool({
       id SERIAL PRIMARY KEY,
       user_id VARCHAR(20) UNIQUE NOT NULL,
       username VARCHAR(255) UNIQUE NOT NULL,
-      hashed_password VARCHAR(255) NOT NULL
+      password VARCHAR(255) NOT NULL
     );
   `;
   const createUrlsTableQuery = `
@@ -22,6 +22,8 @@ const pool = new Pool({
       original_url TEXT NOT NULL,
       click_count INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC'),
+      expires_at TIMESTAMPTZ DEFAULT NULL,
+      is_active BOOLEAN DEFAULT TRUE,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
     );
   `;

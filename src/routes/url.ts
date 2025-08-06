@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { shortenUrl, redirectUrl, getClickStatsForShortId, getClickStatsSummaryForShortId, deleteUrl } from '../controllers/urlController';
+import { shortenUrl, redirectUrl, getClickStatsForShortId, getClickStatsSummaryForShortId, deleteUrl, updateUrlExpiration } from '../controllers/urlController';
 import { authenticateJWT, authenticateJWTOptional } from '../middleware/auth';
 
 const router = Router();
@@ -9,5 +9,6 @@ router.get('/:shortId', redirectUrl);
 router.get('/api/stats/:shortId', getClickStatsForShortId);
 router.get('/api/stats/:shortId/summary', getClickStatsSummaryForShortId);
 router.delete('/api/shorten/:shortId', authenticateJWT, deleteUrl);
+router.put('/api/shorten/:shortId/expiration', authenticateJWT, updateUrlExpiration);
 
 export default router; 

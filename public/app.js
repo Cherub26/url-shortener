@@ -36,6 +36,18 @@ function isValidUrl(url) {
     }
 }
 
+function formatDateDDMMYYYY(date) {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  const timezone = d.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+  return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds} ${timezone}`;
+}
+
 // API Service
 class ApiService {
     async request(endpoint, options = {}) {
@@ -81,10 +93,12 @@ class ApiService {
         });
     }
 
-    async shortenUrl(longUrl) {
+    async shortenUrl(longUrl, expiresAt = null) {
+        const body = { url: longUrl };
+        if (expiresAt) body.expires_at = expiresAt;
         return this.request('/shorten', {
             method: 'POST',
-            body: JSON.stringify({ url: longUrl })
+            body: JSON.stringify(body)
         });
     }
 
@@ -97,6 +111,13 @@ class ApiService {
     async deleteUserLink(shortId) {
         return this.request(`/shorten/${shortId}`, {
             method: 'DELETE'
+        });
+    }
+
+    async updateLinkExpiration(shortId, expiresAt) {
+        return this.request(`/shorten/${shortId}/expiration`, {
+            method: 'PUT',
+            body: JSON.stringify({ expires_at: expiresAt })
         });
     }
 }
@@ -169,6 +190,18 @@ class Router {
                     <div class="form-field">
                         <input type="url" id="longUrl" placeholder="Paste your long URL here" required />
                     </div>
+                    <div class="form-field">
+                        <label for="expirationPreset" style="color:#eedee7; font-size:0.95rem; margin-bottom:0.2rem; display:block;">Expiration (optional):</label>
+                        <select id="expirationPreset" style="width:100%; padding:0.5rem; border-radius:6px; border:1.5px solid #e040fb; background:#3e143e; color:#eedee7; margin-bottom:0.5rem;">
+                            <option value="">No expiration</option>
+                            <option value="1d">1 day</option>
+                            <option value="1w">1 week</option>
+                            <option value="1m">1 month</option>
+                            <option value="1y">1 year</option>
+                            <option value="custom">Custom date & time</option>
+                        </select>
+                        <input type="datetime-local" id="customExpirationDate" step="60" style="width:100%; padding:0.5rem; border-radius:6px; border:1.5px solid #e040fb; background:#3e143e; color:#eedee7; display:none; margin-top:0.3rem;" />
+                    </div>
                     <button type="submit" class="btn btn-primary">Shorten</button>
                 </form>
                 <div id="shortUrlResult" style="display: none;" class="short-url-result">
@@ -184,6 +217,23 @@ class Router {
                 ` : ''}
             </div>
         `;
+        const preset = document.getElementById('expirationPreset');
+        const customDate = document.getElementById('customExpirationDate');
+        preset.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDate.style.display = 'block';
+                customDate.required = true;
+                // Set min to now (local time)
+                const now = new Date();
+                const pad = n => n.toString().padStart(2, '0');
+                const min = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                customDate.min = min;
+            } else {
+                customDate.style.display = 'none';
+                customDate.required = false;
+                customDate.value = '';
+            }
+        });
     }
 
     showLogin() {
@@ -300,15 +350,40 @@ class Router {
             const linksContent = document.getElementById('linksContent');
 
             if (links && links.length > 0) {
-                const linksList = links.map((link, idx) => `
-                    <div class="link-item" id="link-item-${idx}" style="position: relative; overflow: hidden;">
-                        <h3><a href="${link.shortUrl}" target="_blank" rel="noopener noreferrer">${link.shortUrl}</a></h3>
-                        <p>${link.longUrl}</p>
-                        <button class="btn btn-stats" onclick="showLinkStats('${link.shortUrl.split('/').pop()}', ${idx})">Statistics</button>
-                        <button class="btn btn-delete" onclick="openDeleteDialog('${link.shortUrl.split('/').pop()}', ${idx})">Delete</button>
-                        <div class="stats-summary" id="stats-summary-${idx}" style="display:none;"></div>
-                    </div>
-                `).join('');
+                const linksList = links.map((link, idx) => {
+                    // Determine status
+                    let status = 'Active';
+                    let statusClass = 'link-status-active';
+                    let expired = false;
+                    if (!link.isActive) {
+                        status = 'Inactive';
+                        statusClass = 'link-status-inactive';
+                    } else if (link.expiresAt) {
+                        const now = new Date();
+                        const exp = new Date(link.expiresAt);
+                        if (exp < now) {
+                            status = 'Expired';
+                            statusClass = 'link-status-expired';
+                            expired = true;
+                        }
+                    }
+                    let expiresDisplay = '';
+                    if (link.expiresAt) {
+                        const expDate = new Date(link.expiresAt);
+                        expiresDisplay = ` (expires: ${formatDateDDMMYYYY(expDate)} )`;
+                    }
+                    return `
+                        <div class="link-item${!link.isActive || expired ? ' link-item-inactive' : ''}" id="link-item-${idx}" style="position: relative; overflow: hidden;">
+                            <h3><a href="${link.shortUrl}" target="_blank" rel="noopener noreferrer">${link.shortUrl}</a></h3>
+                            <p>${link.longUrl}</p>
+                            <div class="link-status ${statusClass}">${status}${expiresDisplay}</div>
+                            <button class="btn btn-stats" onclick="showLinkStats('${link.shortUrl.split('/').pop()}', ${idx})">Statistics</button>
+                            <button class="btn btn-edit" onclick="openEditDialog('${link.shortUrl.split('/').pop()}', ${idx}, '${link.expiresAt || ''}')">Edit</button>
+                            <button class="btn btn-delete" onclick="openDeleteDialog('${link.shortUrl.split('/').pop()}', ${idx})">Delete</button>
+                            <div class="stats-summary" id="stats-summary-${idx}" style="display:none;"></div>
+                        </div>
+                    `;
+                }).join('');
 
                 linksContent.innerHTML = `<ul class="links-list">${linksList}</ul>`;
             } else {
@@ -358,6 +433,8 @@ window.showLinkStats = async function(shortId, idx) {
 
 let deleteDialogShortId = null;
 let deleteDialogIdx = null;
+let editDialogShortId = null;
+let editDialogIdx = null;
 
 window.openDeleteDialog = function(shortId, idx) {
     deleteDialogShortId = shortId;
@@ -385,6 +462,111 @@ window.confirmDeleteLink = async function() {
     closeDeleteDialog();
 };
 
+window.openEditDialog = function(shortId, idx, currentExpiresAt) {
+    editDialogShortId = shortId;
+    editDialogIdx = idx;
+    
+    // Set up the edit dialog
+    const editDialog = document.getElementById('edit-dialog');
+    const expirationPreset = document.getElementById('editExpirationPreset');
+    const customDate = document.getElementById('editCustomExpirationDate');
+    
+    // Set current expiration value
+    if (currentExpiresAt) {
+        // Convert UTC to local datetime-local format
+        const date = new Date(currentExpiresAt);
+        const pad = n => n.toString().padStart(2, '0');
+        const localDateTime = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        customDate.value = localDateTime;
+        expirationPreset.value = 'custom';
+        customDate.style.display = 'block';
+        customDate.required = true;
+    } else {
+        expirationPreset.value = '';
+        customDate.value = '';
+        customDate.style.display = 'none';
+        customDate.required = false;
+    }
+    
+    // Set min date to now
+    const now = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const min = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    customDate.min = min;
+    
+    // Add event listener for expiration selector
+    expirationPreset.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customDate.style.display = 'block';
+            customDate.required = true;
+        } else {
+            customDate.style.display = 'none';
+            customDate.required = false;
+            customDate.value = '';
+        }
+    });
+    
+    editDialog.style.display = 'flex';
+};
+
+window.closeEditDialog = function() {
+    editDialogShortId = null;
+    editDialogIdx = null;
+    document.getElementById('edit-dialog').style.display = 'none';
+};
+
+window.confirmEditLink = async function() {
+    if (!editDialogShortId) return;
+    
+    const expirationPreset = document.getElementById('editExpirationPreset');
+    const customDate = document.getElementById('editCustomExpirationDate');
+    
+    // Calculate expires_at in UTC if set
+    let expiresAt = null;
+    if (expirationPreset.value) {
+        if (expirationPreset.value === 'custom') {
+            if (!customDate.value) {
+                showToast('Please select a custom expiration date and time.', 'error');
+                return;
+            }
+            // Convert local datetime to UTC ISO string
+            expiresAt = new Date(customDate.value).toISOString();
+        } else {
+            // Preset durations
+            const now = new Date();
+            switch (expirationPreset.value) {
+                case '1d':
+                    now.setUTCDate(now.getUTCDate() + 1);
+                    break;
+                case '1w':
+                    now.setUTCDate(now.getUTCDate() + 7);
+                    break;
+                case '1m':
+                    now.setUTCMonth(now.getUTCMonth() + 1);
+                    break;
+                case '1y':
+                    now.setUTCFullYear(now.getUTCFullYear() + 1);
+                    break;
+            }
+            // Set to end of day UTC
+            now.setUTCHours(23, 59, 59, 999);
+            expiresAt = now.toISOString();
+        }
+    }
+    
+    try {
+        await api.updateLinkExpiration(editDialogShortId, expiresAt);
+        showToast('Link expiration updated successfully!');
+        
+        // Reload the links to show updated expiration
+        router.loadUserLinks();
+        
+        closeEditDialog();
+    } catch (error) {
+        showToast(error.message || 'Failed to update link expiration', 'error');
+    }
+};
+
 // Event handlers
 async function handleShortenUrl(event) {
     event.preventDefault();
@@ -392,6 +574,8 @@ async function handleShortenUrl(event) {
     const longUrl = document.getElementById('longUrl').value;
     const errorDiv = document.getElementById('error');
     const resultDiv = document.getElementById('shortUrlResult');
+    const preset = document.getElementById('expirationPreset');
+    const customDate = document.getElementById('customExpirationDate');
 
     // Clear previous results
     errorDiv.style.display = 'none';
@@ -405,13 +589,57 @@ async function handleShortenUrl(event) {
         return;
     }
 
+    // Calculate expires_at in UTC if set
+    let expiresAt = null;
+    if (preset.value) {
+        if (preset.value === 'custom') {
+            if (!customDate.value) {
+                errorDiv.textContent = 'Please select a custom expiration date and time.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            // Prevent past date
+            const selected = new Date(customDate.value);
+            const now = new Date();
+            if (selected < now) {
+                showToast('Expiration date must be in the future.', 'error');
+                return;
+            }
+            // Convert local datetime to UTC ISO string
+            expiresAt = new Date(customDate.value).toISOString();
+        } else {
+            // Preset durations
+            const now = new Date();
+            switch (preset.value) {
+                case '1d':
+                    now.setUTCDate(now.getUTCDate() + 1);
+                    break;
+                case '1w':
+                    now.setUTCDate(now.getUTCDate() + 7);
+                    break;
+                case '1m':
+                    now.setUTCMonth(now.getUTCMonth() + 1);
+                    break;
+                case '1y':
+                    now.setUTCFullYear(now.getUTCFullYear() + 1);
+                    break;
+            }
+            // Set to end of day UTC
+            now.setUTCHours(23, 59, 59, 999);
+            expiresAt = now.toISOString();
+        }
+    }
+
     try {
-        const result = await api.shortenUrl(longUrl);
+        const result = await api.shortenUrl(longUrl, expiresAt);
         const shortUrlLink = document.getElementById('shortUrlLink');
         shortUrlLink.href = result.shortUrl;
         shortUrlLink.textContent = result.shortUrl;
         resultDiv.style.display = 'flex';
         document.getElementById('longUrl').value = '';
+        preset.value = '';
+        customDate.value = '';
+        customDate.style.display = 'none';
     } catch (error) {
         errorDiv.textContent = error.message || 'Failed to shorten URL';
         errorDiv.style.display = 'block';

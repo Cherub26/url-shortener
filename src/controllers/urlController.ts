@@ -92,7 +92,7 @@ async function collectClickStats(urlId: number, shortId: string, req: Request) {
 
 // Shorten a long URL
 export const shortenUrl = async (req: Request, res: Response) => {
-  const { url } = req.body;
+  const { url, expires_at } = req.body;
   if (!url) return res.status(400).json({ message: 'URL is required' });
 
   try {
@@ -100,15 +100,28 @@ export const shortenUrl = async (req: Request, res: Response) => {
     
     // If user is authenticated, associate user_id
     const userId = req.user?.id || null;
+    let expiresAtUTC = null;
+    if (expires_at) {
+      // Parse and convert to UTC string
+      const date = new Date(expires_at);
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({ message: 'Invalid expiration date' });
+      }
+      // Prevent setting expiration in the past
+      if (date < new Date()) {
+        return res.status(400).json({ message: 'Expiration date must be in the future' });
+      }
+      expiresAtUTC = date.toISOString();
+    }
     if (userId) {
       await pool.query(
-        'INSERT INTO urls (short_id, original_url, click_count, user_id) VALUES ($1, $2, $3, $4)',
-        [shortId, url, 0, userId]
+        'INSERT INTO urls (short_id, original_url, click_count, user_id, expires_at, is_active) VALUES ($1, $2, $3, $4, $5, $6)',
+        [shortId, url, 0, userId, expiresAtUTC, true]
       );
     } else {
       await pool.query(
-        'INSERT INTO urls (short_id, original_url, click_count) VALUES ($1, $2, $3)',
-        [shortId, url, 0]
+        'INSERT INTO urls (short_id, original_url, click_count, expires_at, is_active) VALUES ($1, $2, $3, $4, $5)',
+        [shortId, url, 0, expiresAtUTC, true]
       );
     }
     const shortUrl = `${req.protocol}://${req.get('host')}/${shortId}`;
@@ -128,35 +141,83 @@ export const redirectUrl = async (req: Request, res: Response) => {
     const cachedData = await redis.get(cacheKey);
     let originalUrl: string | null = null;
     let urlId: number | null = null;
+    let isActive: boolean | null = null;
+    let expiresAt: string | null = null;
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
         originalUrl = parsed.original_url;
         urlId = parsed.url_id;
+        isActive = parsed.is_active;
+        expiresAt = parsed.expires_at;
       } catch (e) {}
     }
-    if (originalUrl && urlId) {
-      res.redirect(originalUrl as string);
+    if (originalUrl && urlId && isActive !== null) {
+      // Check expiration - compare UTC times
+      const now = new Date().toISOString();
+      if (!isActive || (expiresAt && expiresAt < now)) {
+        return res.status(410)
+          .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+          .set('Pragma', 'no-cache')
+          .set('Expires', '0')
+          .json({ error: 'This link has expired or is inactive.' });
+      }
+      // Use 307 redirect with cache control headers to prevent browser caching
+      res.status(307)
+        .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .set('Pragma', 'no-cache')
+        .set('Expires', '0')
+        .set('Location', originalUrl as string)
+        .send();
       // Collect click stats asynchronously
       await collectClickStats(urlId!, shortId, req);
       return;
     }
-    // Not in cache, look up original URL and id in database by shortId
-    const result = await pool.query('SELECT id, original_url FROM urls WHERE short_id = $1', [shortId]);
+    // Not in cache, look up original URL, id, is_active, expires_at in database by shortId
+    const result = await pool.query('SELECT id, original_url, is_active, expires_at FROM urls WHERE short_id = $1', [shortId]);
     if (result.rows.length) {
-      const urlRow = result.rows[0] as UrlIdRow;
+      const urlRow = result.rows[0];
       urlId = urlRow.id;
-      originalUrl = urlRow.original_url!;
-      res.redirect(originalUrl as string);
+      originalUrl = urlRow.original_url;
+      isActive = urlRow.is_active;
+      expiresAt = urlRow.expires_at;
+      // Check expiration - compare UTC times
+      const now = new Date().toISOString();
+      if (!isActive || (expiresAt && expiresAt < now)) {
+        // Optionally, update is_active in DB if expired
+        if (isActive && expiresAt && expiresAt < now) {
+          await pool.query('UPDATE urls SET is_active = FALSE WHERE id = $1', [urlId]);
+        }
+        return res.status(410)
+          .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+          .set('Pragma', 'no-cache')
+          .set('Expires', '0')
+          .json({ error: 'This link has expired or is inactive.' });
+      }
+      // Use 307 redirect with cache control headers to prevent browser caching
+      res.status(307)
+        .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .set('Pragma', 'no-cache')
+        .set('Expires', '0')
+        .set('Location', originalUrl as string)
+        .send();
       
       // Collect click stats asynchronously
       await collectClickStats(urlId!, shortId, req);
-      
-      // Cache both original_url and url_id in Redis for 10 minutes
-      await redis.set(cacheKey, JSON.stringify({ original_url: originalUrl, url_id: urlId }), 'EX', 600);
+      // Cache with is_active and expires_at
+      await redis.set(cacheKey, JSON.stringify({
+        original_url: originalUrl,
+        url_id: urlId,
+        is_active: isActive,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null
+      }), 'EX', 600);
       return;
     } else {
-      return res.status(404).json({ error: 'Short URL not found' });
+      return res.status(404)
+        .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .set('Pragma', 'no-cache')
+        .set('Expires', '0')
+        .json({ error: 'Short URL not found' });
     }
   } catch (err) {
     console.error('Error during redirect:', err);
@@ -229,5 +290,57 @@ export const deleteUrl = async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Error deleting URL:', err);
     res.status(500).json({ error: 'Failed to delete URL' });
+  }
+}; 
+
+// Update expiration date of a short URL (only by owner)
+export const updateUrlExpiration = async (req: Request, res: Response) => {
+  const { shortId } = req.params;
+  const { expires_at } = req.body;
+  const user = req.user;
+  
+  if (!user || !user.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (expires_at === undefined) {
+    return res.status(400).json({ error: 'expires_at field is required' });
+  }
+
+  try {
+    // Check if the URL exists and belongs to the user
+    const urlResult = await pool.query('SELECT id FROM urls WHERE short_id = $1 AND user_id = $2', [shortId, user.id]);
+    if (!urlResult.rows.length) {
+      return res.status(404).json({ error: 'URL not found or not owned by user' });
+    }
+
+    let expiresAtUTC = null;
+    if (expires_at !== null) {
+      // Parse and convert to UTC string
+      const date = new Date(expires_at);
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({ error: 'Invalid expiration date' });
+      }
+      // Prevent setting expiration in the past
+      if (date < new Date()) {
+        return res.status(400).json({ error: 'Expiration date must be in the future' });
+      }
+      expiresAtUTC = date.toISOString();
+    }
+
+    // Update the expiration date
+    await pool.query('UPDATE urls SET expires_at = $1 WHERE short_id = $2 AND user_id = $3', [expiresAtUTC, shortId, user.id]);
+
+    // Clear cache if it exists
+    const cacheKey = `shorturl:${shortId}`;
+    await redis.del(cacheKey);
+
+    res.json({ 
+      message: 'Expiration date updated successfully',
+      expires_at: expiresAtUTC 
+    });
+  } catch (err) {
+    console.error('Error updating URL expiration:', err);
+    res.status(500).json({ error: 'Failed to update expiration date' });
   }
 }; 

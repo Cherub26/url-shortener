@@ -22,7 +22,7 @@ export const register = async (req: Request, res: Response) => {
     const randomUserId = await generateUniqueUserId();
     
     const result = await pool.query(
-      'INSERT INTO users (user_id, username, hashed_password) VALUES ($1, $2, $3) RETURNING id, user_id, username',
+      'INSERT INTO users (user_id, username, password) VALUES ($1, $2, $3) RETURNING id, user_id, username',
       [randomUserId, username, hashedPassword]
     );
     const user = result.rows[0] as UserRow;
@@ -44,7 +44,7 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     const user = result.rows[0] as UserRow;
-    const match = await bcrypt.compare(password, user.hashed_password);
+    const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -62,13 +62,15 @@ export const getUserLinks = async (req: Request, res: Response) => {
   }
   try {
     const result = await pool.query(
-      'SELECT short_id, original_url, click_count FROM urls WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT short_id, original_url, click_count, is_active, expires_at FROM urls WHERE user_id = $1 ORDER BY created_at DESC',
       [user.id]
     );
     const links = result.rows.map((row: UrlRow) => ({
       shortUrl: `${req.protocol}://${req.get('host')}/${row.short_id}`,
       longUrl: row.original_url,
-      clickCount: row.click_count
+      clickCount: row.click_count,
+      isActive: row.is_active,
+      expiresAt: row.expires_at ? new Date(row.expires_at).toISOString() : null
     }));
     res.json(links);
   } catch (err) {
