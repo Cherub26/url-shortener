@@ -1,3 +1,4 @@
+/// <reference path="./types/express.d.ts" />
 import express, { Request, Response } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
