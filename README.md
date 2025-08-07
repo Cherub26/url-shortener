@@ -72,9 +72,7 @@ url-shortener/
      DATABASE_URL=postgres://user:password@localhost:5432/database_name
      PORT=3000
      JWT_SECRET=your_jwt_secret
-     REDIS_HOST=localhost
-     REDIS_PORT=6379
-     REDIS_PASSWORD=yourpassword
+     REDIS_URL=redis://localhost:6379
      REDIS_DB=0
      ```
 
