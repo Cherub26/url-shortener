@@ -156,6 +156,15 @@ export const redirectUrl = async (req: Request, res: Response) => {
       // Check expiration - compare UTC times
       const now = new Date().toISOString();
       if (!isActive || (expiresAt && expiresAt < now)) {
+        // If isActive is true and the URL is expired, update the cache to set is_active to false
+        if (isActive && expiresAt && expiresAt < now) {
+          await redis.set(cacheKey, JSON.stringify({
+            original_url: originalUrl,
+            url_id: urlId,
+            is_active: false,
+            expires_at: expiresAt
+          }), 'EX', 600);
+        }
         return res.status(410)
           .set('Cache-Control', 'no-cache, no-store, must-revalidate')
           .set('Pragma', 'no-cache')
@@ -196,9 +205,6 @@ export const redirectUrl = async (req: Request, res: Response) => {
       }
       // Use 307 redirect with cache control headers to prevent browser caching
       res.status(307)
-        .set('Cache-Control', 'no-cache, no-store, must-revalidate')
-        .set('Pragma', 'no-cache')
-        .set('Expires', '0')
         .set('Location', originalUrl as string)
         .send();
       
@@ -329,7 +335,7 @@ export const updateUrlExpiration = async (req: Request, res: Response) => {
     }
 
     // Update the expiration date
-    await pool.query('UPDATE urls SET expires_at = $1 WHERE short_id = $2 AND user_id = $3', [expiresAtUTC, shortId, user.id]);
+    await pool.query('UPDATE urls SET expires_at = $1, is_active = TRUE WHERE short_id = $2 AND user_id = $3', [expiresAtUTC, shortId, user.id]);
 
     // Clear cache if it exists
     const cacheKey = `shorturl:${shortId}`;
