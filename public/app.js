@@ -116,7 +116,7 @@ class ApiService {
 
     async updateLinkExpiration(shortId, expiresAt) {
         return this.request(`/shorten/${shortId}/expiration`, {
-            method: 'PUT',
+            method: 'POST',
             body: JSON.stringify({ expires_at: expiresAt })
         });
     }
@@ -374,7 +374,7 @@ class Router {
                     }
                     return `
                         <div class="link-item${!link.isActive || expired ? ' link-item-inactive' : ''}" id="link-item-${idx}" style="position: relative; overflow: hidden;">
-                            <h3><a href="${link.shortUrl}" target="_blank" rel="noopener noreferrer">${link.shortUrl}</a></h3>
+                            <h3><a href="${link.shortUrl.replace(window.location.origin + '/', window.location.origin + '/api/')}" target="_blank" rel="noopener noreferrer">${link.shortUrl.replace(window.location.origin + '/', window.location.origin + '/api/')}</a></h3>
                             <p>${link.longUrl}</p>
                             <div class="link-status ${statusClass}">${status}${expiresDisplay}</div>
                             <button class="btn btn-stats" onclick="showLinkStats('${link.shortUrl.split('/').pop()}', ${idx})">Statistics</button>
@@ -633,8 +633,8 @@ async function handleShortenUrl(event) {
     try {
         const result = await api.shortenUrl(longUrl, expiresAt);
         const shortUrlLink = document.getElementById('shortUrlLink');
-        shortUrlLink.href = result.shortUrl;
-        shortUrlLink.textContent = result.shortUrl;
+        shortUrlLink.href = result.shortUrl.replace(window.location.origin + '/', window.location.origin + '/api/');
+        shortUrlLink.textContent = result.shortUrl.replace(window.location.origin + '/', window.location.origin + '/api/');
         resultDiv.style.display = 'flex';
         document.getElementById('longUrl').value = '';
         preset.value = '';

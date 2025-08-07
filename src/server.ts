@@ -24,7 +24,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // URL-related API and redirect routes
 app.use('/api/user', userRoutes);
-app.use('/', urlRoutes);
+app.use('/api', urlRoutes);
 
 // Start BullMQ click-stats worker inside the main server process
 startClickStatsWorker();

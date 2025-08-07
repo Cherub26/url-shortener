@@ -4,11 +4,11 @@ import { authenticateJWT, authenticateJWTOptional } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/api/shorten', authenticateJWTOptional, shortenUrl);
+router.post('/shorten', authenticateJWTOptional, shortenUrl);
 router.get('/:shortId', redirectUrl);
-router.get('/api/stats/:shortId', getClickStatsForShortId);
-router.get('/api/stats/:shortId/summary', getClickStatsSummaryForShortId);
-router.delete('/api/shorten/:shortId', authenticateJWT, deleteUrl);
-router.put('/api/shorten/:shortId/expiration', authenticateJWT, updateUrlExpiration);
+router.get('/stats/:shortId', getClickStatsForShortId);
+router.get('/stats/:shortId/summary', getClickStatsSummaryForShortId);
+router.delete('/shorten/:shortId', authenticateJWT, deleteUrl);
+router.post('/shorten/:shortId/expiration', authenticateJWT, updateUrlExpiration);
 
 export default router; 
