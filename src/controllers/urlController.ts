@@ -124,7 +124,7 @@ export const shortenUrl = async (req: Request, res: Response) => {
         [shortId, url, 0, expiresAtUTC, true]
       );
     }
-    const shortUrl = `${req.protocol}://${req.get('host')}/${shortId}`;
+    const shortUrl = `${req.protocol}://${req.get('host')}/api/${shortId}`;
     res.json({ shortUrl });
   } catch (err) {
     console.error('Error saving URL:', err);

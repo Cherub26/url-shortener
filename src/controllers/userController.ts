@@ -66,7 +66,7 @@ export const getUserLinks = async (req: Request, res: Response) => {
       [user.id]
     );
     const links = result.rows.map((row: UrlRow) => ({
-      shortUrl: `${req.protocol}://${req.get('host')}/${row.short_id}`,
+      shortUrl: `${req.protocol}://${req.get('host')}/api/${row.short_id}`,
       longUrl: row.original_url,
       clickCount: row.click_count,
       isActive: row.is_active,
